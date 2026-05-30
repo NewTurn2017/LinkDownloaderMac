@@ -1,0 +1,8 @@
+.build/
+.swiftpm/
+.codex/
+.omx/
+dist/
+release/
+*.xcuserdata/
+.DS_Store
