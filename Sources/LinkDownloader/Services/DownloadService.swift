@@ -4,7 +4,7 @@ final class DownloadService {
     func download(
         urlString: String,
         destination: URL,
-        onProcess: @escaping (Process) -> Void,
+        session: DownloadSession,
         onOutput: @escaping (String) -> Void
     ) async throws -> DownloadResult {
         let trimmedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -21,7 +21,7 @@ final class DownloadService {
         }
 
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
-        let beforeFiles = Self.snapshotFiles(in: destination)
+        let beforeFiles = try Self.snapshotFiles(in: destination)
 
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -53,8 +53,9 @@ final class DownloadService {
 
                 do {
                     try process.run()
-                    onProcess(process)
+                    session.attach(process)
                     process.waitUntilExit()
+                    session.finish()
                     pipe.fileHandleForReading.readabilityHandler = nil
 
                     guard process.terminationStatus == 0 else {
@@ -62,10 +63,11 @@ final class DownloadService {
                         return
                     }
 
-                    let afterFiles = Self.snapshotFiles(in: destination)
+                    let afterFiles = try Self.snapshotFiles(in: destination)
                     let createdFiles = afterFiles.subtracting(beforeFiles).sorted { $0.lastPathComponent < $1.lastPathComponent }
                     continuation.resume(returning: DownloadResult(createdFiles: createdFiles))
                 } catch {
+                    session.finish()
                     pipe.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(throwing: error)
                 }
@@ -73,18 +75,16 @@ final class DownloadService {
         }
     }
 
-    private static func snapshotFiles(in directory: URL) -> Set<URL> {
-        guard let contents = try? FileManager.default.contentsOfDirectory(
+    static func snapshotFiles(in directory: URL) throws -> Set<URL> {
+        let contents = try FileManager.default.contentsOfDirectory(
             at: directory,
             includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
-        ) else {
-            return []
-        }
+        )
 
-        return Set(contents.filter { url in
-            let values = try? url.resourceValues(forKeys: [.isRegularFileKey])
-            return values?.isRegularFile == true
+        return Set(try contents.filter { url in
+            let values = try url.resourceValues(forKeys: [.isRegularFileKey])
+            return values.isRegularFile == true
         })
     }
 }

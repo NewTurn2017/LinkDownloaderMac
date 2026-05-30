@@ -4,7 +4,7 @@ set -euo pipefail
 MODE="${1:-run}"
 APP_NAME="LinkDownloader"
 BUNDLE_ID="com.withgenie.LinkDownloader"
-APP_VERSION="0.1.0"
+APP_VERSION="0.1.1"
 MIN_SYSTEM_VERSION="13.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

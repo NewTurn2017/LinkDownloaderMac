@@ -11,6 +11,7 @@ let package = Package(
         .executable(name: "LinkDownloader", targets: ["LinkDownloader"])
     ],
     targets: [
-        .executableTarget(name: "LinkDownloader")
+        .executableTarget(name: "LinkDownloader"),
+        .testTarget(name: "LinkDownloaderTests", dependencies: ["LinkDownloader"])
     ]
 )

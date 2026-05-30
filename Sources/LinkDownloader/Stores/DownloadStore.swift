@@ -12,9 +12,9 @@ final class DownloadStore: ObservableObject {
     @Published var lastDownloadedFile: URL?
 
     private let service = DownloadService()
-    private var activeProcess: Process?
+    private var activeSession: DownloadSession?
     private var downloadTask: Task<Void, Never>?
-    private var didRequestCancel = false
+    private var activeDownloadID: UUID?
 
     init() {
         destinationURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
@@ -48,13 +48,17 @@ final class DownloadStore: ObservableObject {
         guard canStart else { return }
 
         isDownloading = true
-        didRequestCancel = false
         statusMessage = "다운로드 중"
         logText = ""
         lastDownloadedFile = nil
 
         let inputURL = urlText
         let targetDirectory = destinationURL
+        let downloadID = UUID()
+        let session = DownloadSession()
+
+        activeDownloadID = downloadID
+        activeSession = session
 
         downloadTask = Task { [weak self] in
             guard let self else { return }
@@ -63,36 +67,35 @@ final class DownloadStore: ObservableObject {
                 let result = try await service.download(
                     urlString: inputURL,
                     destination: targetDirectory,
-                    onProcess: { process in
-                        Task { @MainActor in
-                            self.activeProcess = process
-                        }
-                    },
+                    session: session,
                     onOutput: { output in
                         Task { @MainActor in
-                            self.appendLog(output)
+                            if self.activeDownloadID == downloadID {
+                                self.appendLog(output)
+                            }
                         }
                     }
                 )
 
+                guard activeDownloadID == downloadID else { return }
                 lastDownloadedFile = result.primaryFile
-                statusMessage = didRequestCancel ? "중지됨" : result.primaryFile.map { "완료: \($0.lastPathComponent)" } ?? "완료"
+                statusMessage = session.isCancelled ? "중지됨" : result.primaryFile.map { "완료: \($0.lastPathComponent)" } ?? "완료"
             } catch {
-                statusMessage = didRequestCancel ? "중지됨" : error.localizedDescription
+                guard activeDownloadID == downloadID else { return }
+                statusMessage = session.isCancelled ? "중지됨" : error.localizedDescription
             }
 
-            activeProcess = nil
+            guard activeDownloadID == downloadID else { return }
+            activeSession = nil
+            activeDownloadID = nil
+            downloadTask = nil
             isDownloading = false
         }
     }
 
     func cancelDownload() {
-        didRequestCancel = true
-        activeProcess?.terminate()
-        downloadTask?.cancel()
-        activeProcess = nil
-        isDownloading = false
-        statusMessage = "중지됨"
+        activeSession?.cancel()
+        statusMessage = "중지 중"
     }
 
     func revealDestination() {

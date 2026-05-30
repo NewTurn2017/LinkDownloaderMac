@@ -14,8 +14,26 @@ enum ShellLocator {
     }
 
     static func environmentWithDefaultPath() -> [String: String] {
-        var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = defaultPath
+        let parentEnvironment = ProcessInfo.processInfo.environment
+        var environment = ["PATH": defaultPath]
+        let allowedKeys = [
+            "HOME",
+            "TMPDIR",
+            "LANG",
+            "LC_ALL",
+            "LC_CTYPE",
+            "SSL_CERT_FILE",
+            "SSL_CERT_DIR",
+            "XDG_CACHE_HOME",
+            "XDG_CONFIG_HOME"
+        ]
+
+        for key in allowedKeys {
+            if let value = parentEnvironment[key] {
+                environment[key] = value
+            }
+        }
+
         return environment
     }
 }

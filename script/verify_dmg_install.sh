@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DMG_PATH="${1:-release/LinkDownloader-0.1.0.dmg}"
+DMG_PATH="${1:-release/LinkDownloader-0.1.1.dmg}"
 APP_NAME="LinkDownloader"
 INSTALL_DIR="${INSTALL_DIR:-/Applications}"
 MOUNT_DIR="$(mktemp -d)"
