@@ -60,7 +60,9 @@ final class DownloadProcess: @unchecked Sendable {
         }
         try check(spawnResult)
 
-        try pipe.fileHandleForWriting.close()
+        // After spawn succeeds, returning process ownership is more important than
+        // treating the parent's pipe close as fatal.
+        pipe.fileHandleForWriting.closeFile()
         return DownloadProcess(processIdentifier: pid, outputHandle: pipe.fileHandleForReading)
     }
 

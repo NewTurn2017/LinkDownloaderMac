@@ -20,7 +20,7 @@ brew install yt-dlp ffmpeg
 
 ## Install From DMG
 
-1. Download `LinkDownloader-0.1.3.dmg` from the GitHub release.
+1. Download `LinkDownloader-0.1.4.dmg` from the GitHub release.
 2. Open the DMG.
 3. Drag `LinkDownloader.app` to `Applications`.
 4. Launch `LinkDownloader` from Applications.
@@ -88,7 +88,7 @@ commit those credentials. If `APPLE_DEVELOPER_DIR` is not set, the script uses
 After packaging:
 
 ```bash
-./script/verify_dmg_install.sh release/LinkDownloader-0.1.3.dmg
+./script/verify_dmg_install.sh release/LinkDownloader-0.1.4.dmg
 ```
 
 The script mounts the DMG, verifies signatures and Gatekeeper assessment,
