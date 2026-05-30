@@ -5,7 +5,7 @@ MODE="${1:-package}"
 
 APP_NAME="LinkDownloader"
 BUNDLE_ID="com.withgenie.LinkDownloader"
-APP_VERSION="${APP_VERSION:-0.1.1}"
+APP_VERSION="${APP_VERSION:-0.1.2}"
 MIN_SYSTEM_VERSION="13.0"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: jaehyun jang (2UANJX7ATM)}"
 APPLE_DEVELOPER_DIR="${APPLE_DEVELOPER_DIR:-$HOME/dev/private/apple_developer}"

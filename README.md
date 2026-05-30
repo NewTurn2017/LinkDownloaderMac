@@ -20,7 +20,7 @@ brew install yt-dlp ffmpeg
 
 ## Install From DMG
 
-1. Download `LinkDownloader-0.1.1.dmg` from the GitHub release.
+1. Download `LinkDownloader-0.1.2.dmg` from the GitHub release.
 2. Open the DMG.
 3. Drag `LinkDownloader.app` to `Applications`.
 4. Launch `LinkDownloader` from Applications.
@@ -33,6 +33,10 @@ The release DMG is signed with Developer ID and notarized by Apple.
 2. Keep the default destination (`~/Downloads`) or choose another folder.
 3. Click `다운로드`.
 4. Use the Finder button to reveal the downloaded file.
+
+The Stop button terminates the active `yt-dlp` process and its child processes,
+including merge/transcode helpers such as `ffmpeg` when `yt-dlp` starts them as
+children.
 
 For each download, the app asks `yt-dlp` to save the video, thumbnail, and
 metadata JSON using this filename template:
@@ -84,7 +88,7 @@ commit those credentials. If `APPLE_DEVELOPER_DIR` is not set, the script uses
 After packaging:
 
 ```bash
-./script/verify_dmg_install.sh release/LinkDownloader-0.1.1.dmg
+./script/verify_dmg_install.sh release/LinkDownloader-0.1.2.dmg
 ```
 
 The script mounts the DMG, verifies signatures and Gatekeeper assessment,
