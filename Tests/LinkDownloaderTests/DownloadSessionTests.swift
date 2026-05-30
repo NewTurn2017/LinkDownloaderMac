@@ -5,18 +5,20 @@ import XCTest
 final class DownloadSessionTests: XCTestCase {
     func testCancelBeforeAttachTerminatesAttachedProcess() throws {
         let session = DownloadSession()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sleep")
-        process.arguments = ["5"]
+        let process = try DownloadProcess.launch(
+            executablePath: "/bin/sleep",
+            arguments: ["5"],
+            currentDirectory: URL(fileURLWithPath: NSTemporaryDirectory()),
+            environment: ["PATH": "/usr/bin:/bin"]
+        )
 
         session.cancel()
-        try process.run()
         session.attach(process)
-        process.waitUntilExit()
+        let terminationStatus = try process.waitUntilExit()
         session.finish()
 
         XCTAssertTrue(session.isCancelled)
-        XCTAssertNotEqual(process.terminationStatus, 0)
+        XCTAssertNotEqual(terminationStatus, 0)
     }
 
     func testCancelAfterFinishIsNoOp() {
@@ -30,46 +32,48 @@ final class DownloadSessionTests: XCTestCase {
 
     func testCancelTerminatesChildProcess() throws {
         let session = DownloadSession()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", "sleep 30 & wait"]
-
-        try process.run()
+        let process = try DownloadProcess.launch(
+            executablePath: "/bin/sh",
+            arguments: ["-c", "sleep 30 & wait"],
+            currentDirectory: URL(fileURLWithPath: NSTemporaryDirectory()),
+            environment: ["PATH": "/usr/bin:/bin"]
+        )
         session.attach(process)
 
-        let childPIDs = try waitForChildPIDs(parentPID: process.processIdentifier)
-        XCTAssertFalse(childPIDs.isEmpty)
+        let groupPIDs = try waitForGroupPIDs(groupID: process.processIdentifier)
+        XCTAssertGreaterThanOrEqual(groupPIDs.count, 2)
 
-        session.cancel()
-        process.waitUntilExit()
+        XCTAssertNil(session.cancel())
+        _ = try process.waitUntilExit()
         session.finish()
 
-        for childPID in childPIDs {
-            XCTAssertFalse(isRunning(pid: childPID))
+        for pid in groupPIDs {
+            waitUntilNotRunning(pid: pid)
+            XCTAssertFalse(isRunning(pid: pid))
         }
         XCTAssertTrue(session.isCancelled)
     }
 
-    private func waitForChildPIDs(parentPID: pid_t) throws -> [pid_t] {
+    private func waitForGroupPIDs(groupID: pid_t) throws -> [pid_t] {
         let deadline = Date().addingTimeInterval(2)
 
         while Date() < deadline {
-            let pids = try childPIDs(parentPID: parentPID)
-            if !pids.isEmpty {
+            let pids = try processGroupPIDs(groupID: groupID)
+            if pids.count >= 2 {
                 return pids
             }
             Thread.sleep(forTimeInterval: 0.05)
         }
 
-        return try childPIDs(parentPID: parentPID)
+        return try processGroupPIDs(groupID: groupID)
     }
 
-    private func childPIDs(parentPID: pid_t) throws -> [pid_t] {
+    private func processGroupPIDs(groupID: pid_t) throws -> [pid_t] {
         let process = Process()
         let pipe = Pipe()
 
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        process.arguments = ["-P", String(parentPID)]
+        process.arguments = ["-g", String(groupID)]
         process.standardOutput = pipe
         process.standardError = Pipe()
         try process.run()
@@ -84,6 +88,13 @@ final class DownloadSessionTests: XCTestCase {
         return output
             .split(whereSeparator: \.isNewline)
             .compactMap { pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
+    }
+
+    private func waitUntilNotRunning(pid: pid_t) {
+        let deadline = Date().addingTimeInterval(2)
+        while Date() < deadline && isRunning(pid: pid) {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
     }
 
     private func isRunning(pid: pid_t) -> Bool {

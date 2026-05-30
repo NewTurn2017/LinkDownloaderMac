@@ -1,11 +1,11 @@
-import Darwin
 import Foundation
 
 final class DownloadSession: @unchecked Sendable {
     private let lock = NSLock()
-    private var process: Process?
+    private var process: DownloadProcess?
     private var cancelled = false
     private var finished = false
+    private var cancellationError: DownloadCancellationError?
 
     var isCancelled: Bool {
         lock.withLock {
@@ -13,9 +13,14 @@ final class DownloadSession: @unchecked Sendable {
         }
     }
 
-    func attach(_ process: Process) {
-        var shouldTerminate = false
+    var lastCancellationError: DownloadCancellationError? {
+        lock.withLock {
+            cancellationError
+        }
+    }
 
+    func attach(_ process: DownloadProcess) {
+        var shouldTerminate = false
         lock.withLock {
             if cancelled || finished {
                 shouldTerminate = true
@@ -25,14 +30,15 @@ final class DownloadSession: @unchecked Sendable {
         }
 
         if shouldTerminate {
-            terminateProcessTree(root: process)
+            recordCancellationError(process.terminateGroup())
         }
     }
 
-    func cancel() {
+    @discardableResult
+    func cancel() -> DownloadCancellationError? {
         let processToTerminate = lock.withLock {
             guard !finished else {
-                return nil as Process?
+                return nil as DownloadProcess?
             }
 
             cancelled = true
@@ -40,8 +46,11 @@ final class DownloadSession: @unchecked Sendable {
         }
 
         if let processToTerminate {
-            terminateProcessTree(root: processToTerminate)
+            let error = processToTerminate.terminateGroup()
+            recordCancellationError(error)
+            return error
         }
+        return nil
     }
 
     func finish() {
@@ -51,46 +60,10 @@ final class DownloadSession: @unchecked Sendable {
         }
     }
 
-    private func terminateProcessTree(root: Process) {
-        for childPID in Self.descendantPIDs(of: root.processIdentifier) {
-            kill(childPID, SIGTERM)
+    private func recordCancellationError(_ error: DownloadCancellationError?) {
+        guard let error else { return }
+        lock.withLock {
+            cancellationError = error
         }
-        root.terminate()
-    }
-
-    private static func descendantPIDs(of pid: pid_t) -> [pid_t] {
-        childPIDs(of: pid).flatMap { childPID in
-            descendantPIDs(of: childPID) + [childPID]
-        }
-    }
-
-    private static func childPIDs(of pid: pid_t) -> [pid_t] {
-        let process = Process()
-        let pipe = Pipe()
-
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
-        process.arguments = ["-P", String(pid)]
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            return []
-        }
-
-        guard process.terminationStatus == 0 else {
-            return []
-        }
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        guard let output = String(data: data, encoding: .utf8) else {
-            return []
-        }
-
-        return output
-            .split(whereSeparator: \.isNewline)
-            .compactMap { pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
     }
 }

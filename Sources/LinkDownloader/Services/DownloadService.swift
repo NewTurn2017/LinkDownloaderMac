@@ -25,12 +25,7 @@ final class DownloadService {
 
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let process = Process()
-                let pipe = Pipe()
-
-                process.executableURL = URL(fileURLWithPath: ytDLPPath)
-                process.currentDirectoryURL = destination
-                process.arguments = [
+                let arguments = [
                     "--newline",
                     "--no-playlist",
                     "-P", destination.path,
@@ -39,27 +34,22 @@ final class DownloadService {
                     "--write-thumbnail",
                     trimmedURL
                 ]
-                process.environment = ShellLocator.environmentWithDefaultPath()
-                process.standardOutput = pipe
-                process.standardError = pipe
-
-                pipe.fileHandleForReading.readabilityHandler = { handle in
-                    let data = handle.availableData
-                    guard !data.isEmpty, let text = String(data: data, encoding: .utf8) else {
-                        return
-                    }
-                    onOutput(text)
-                }
 
                 do {
-                    try process.run()
+                    let process = try DownloadProcess.launch(
+                        executablePath: ytDLPPath,
+                        arguments: arguments,
+                        currentDirectory: destination,
+                        environment: ShellLocator.environmentWithDefaultPath()
+                    )
+                    process.setOutputHandler(onOutput)
                     session.attach(process)
-                    process.waitUntilExit()
+                    let terminationStatus = try process.waitUntilExit()
                     session.finish()
-                    pipe.fileHandleForReading.readabilityHandler = nil
+                    process.clearOutputHandler()
 
-                    guard process.terminationStatus == 0 else {
-                        continuation.resume(throwing: DownloadServiceError.processFailed(status: process.terminationStatus))
+                    guard terminationStatus == 0 else {
+                        continuation.resume(throwing: DownloadServiceError.processFailed(status: terminationStatus))
                         return
                     }
 
@@ -68,7 +58,6 @@ final class DownloadService {
                     continuation.resume(returning: DownloadResult(createdFiles: createdFiles))
                 } catch {
                     session.finish()
-                    pipe.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(throwing: error)
                 }
             }
