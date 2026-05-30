@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -17,9 +18,7 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(spacing: 10) {
-            Image(systemName: "arrow.down.circle.fill")
-                .font(.title2)
-                .foregroundStyle(.blue)
+            AssetIcon(name: "AppIcon", fallbackSystemName: "arrow.down.circle.fill", size: 28)
 
             Text("링크 다운로드")
                 .font(.title2.weight(.semibold))
@@ -52,9 +51,7 @@ struct ContentView: View {
 
     private var destinationRow: some View {
         HStack(spacing: 10) {
-            Image(systemName: "folder")
-                .frame(width: 24)
-                .foregroundStyle(.secondary)
+            AssetIcon(name: "FileIcon", fallbackSystemName: "doc", size: 24)
 
             Text(store.destinationURL.path)
                 .lineLimit(1)
@@ -81,8 +78,11 @@ struct ContentView: View {
     private var actionRow: some View {
         HStack(spacing: 10) {
             Button(action: store.startDownload) {
-                Label("다운로드", systemImage: "arrow.down.circle.fill")
-                    .frame(minWidth: 104)
+                HStack(spacing: 6) {
+                    AssetIcon(name: "DownloadIcon", fallbackSystemName: "arrow.down.circle.fill", size: 18)
+                    Text("다운로드")
+                }
+                .frame(minWidth: 104)
             }
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(!store.canStart)
@@ -117,6 +117,29 @@ struct ContentView: View {
             }
             .frame(minHeight: 210)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+}
+
+private struct AssetIcon: View {
+    let name: String
+    let fallbackSystemName: String
+    let size: CGFloat
+
+    var body: some View {
+        if let url = Bundle.main.url(forResource: name, withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
+        } else {
+            Image(systemName: fallbackSystemName)
+                .font(.system(size: size))
+                .foregroundStyle(.blue)
+                .frame(width: size, height: size)
+                .accessibilityHidden(true)
         }
     }
 }

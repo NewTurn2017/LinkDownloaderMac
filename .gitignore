@@ -4,5 +4,7 @@
 .omx/
 dist/
 release/
+Assets/AppIcon/*.iconset/
+Assets/AppIcon/LinkDownloader-generated.png
 *.xcuserdata/
 .DS_Store

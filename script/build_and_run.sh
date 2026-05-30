@@ -4,7 +4,7 @@ set -euo pipefail
 MODE="${1:-run}"
 APP_NAME="LinkDownloader"
 BUNDLE_ID="com.withgenie.LinkDownloader"
-APP_VERSION="0.1.4"
+APP_VERSION="0.1.5"
 MIN_SYSTEM_VERSION="13.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -12,6 +12,7 @@ DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
@@ -23,9 +24,15 @@ swift build
 BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS"
+mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+
+./script/build_icons.sh >/dev/null
+cp "Assets/AppIcon/$APP_NAME.icns" "$APP_RESOURCES/$APP_NAME.icns"
+cp "Assets/AppIcon/AppIcon.png" "$APP_RESOURCES/AppIcon.png"
+cp "Assets/AppIcon/DownloadIcon.png" "$APP_RESOURCES/DownloadIcon.png"
+cp "Assets/AppIcon/FileIcon.png" "$APP_RESOURCES/FileIcon.png"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -33,6 +40,8 @@ cat >"$INFO_PLIST" <<PLIST
 <plist version="1.0">
 <dict>
   <key>CFBundleExecutable</key>
+  <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
   <string>$APP_NAME</string>
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_ID</string>

@@ -5,7 +5,7 @@ MODE="${1:-package}"
 
 APP_NAME="LinkDownloader"
 BUNDLE_ID="com.withgenie.LinkDownloader"
-APP_VERSION="${APP_VERSION:-0.1.4}"
+APP_VERSION="${APP_VERSION:-0.1.5}"
 MIN_SYSTEM_VERSION="13.0"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application: jaehyun jang (2UANJX7ATM)}"
 APPLE_DEVELOPER_DIR="${APPLE_DEVELOPER_DIR:-$HOME/dev/private/apple_developer}"
@@ -42,6 +42,12 @@ BUILD_BINARY="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-pat
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 
+./script/build_icons.sh >/dev/null
+cp "Assets/AppIcon/$APP_NAME.icns" "$APP_RESOURCES/$APP_NAME.icns"
+cp "Assets/AppIcon/AppIcon.png" "$APP_RESOURCES/AppIcon.png"
+cp "Assets/AppIcon/DownloadIcon.png" "$APP_RESOURCES/DownloadIcon.png"
+cp "Assets/AppIcon/FileIcon.png" "$APP_RESOURCES/FileIcon.png"
+
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -50,6 +56,8 @@ cat >"$INFO_PLIST" <<PLIST
   <key>CFBundleDevelopmentRegion</key>
   <string>ko</string>
   <key>CFBundleExecutable</key>
+  <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
   <string>$APP_NAME</string>
   <key>CFBundleIdentifier</key>
   <string>$BUNDLE_ID</string>

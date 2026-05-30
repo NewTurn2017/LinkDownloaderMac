@@ -20,7 +20,7 @@ brew install yt-dlp ffmpeg
 
 ## Install From DMG
 
-1. Download `LinkDownloader-0.1.4.dmg` from the GitHub release.
+1. Download `LinkDownloader-0.1.5.dmg` from the GitHub release.
 2. Open the DMG.
 3. Drag `LinkDownloader.app` to `Applications`.
 4. Launch `LinkDownloader` from Applications.
@@ -71,6 +71,10 @@ Create a signed, notarized, stapled DMG:
 ./script/package_release.sh --notarize
 ```
 
+The packaging scripts build the transparent app icon assets first, then embed
+`LinkDownloader.icns` for Finder, DMG, and Dock display. The release bundle also
+contains transparent PNG assets for the in-app download and file icons.
+
 The notarization script expects App Store Connect API credentials in this local
 layout:
 
@@ -88,7 +92,7 @@ commit those credentials. If `APPLE_DEVELOPER_DIR` is not set, the script uses
 After packaging:
 
 ```bash
-./script/verify_dmg_install.sh release/LinkDownloader-0.1.4.dmg
+./script/verify_dmg_install.sh release/LinkDownloader-0.1.5.dmg
 ```
 
 The script mounts the DMG, verifies signatures and Gatekeeper assessment,
