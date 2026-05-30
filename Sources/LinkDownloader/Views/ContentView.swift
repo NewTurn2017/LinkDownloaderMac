@@ -9,6 +9,7 @@ struct ContentView: View {
             header
             urlInput
             destinationRow
+            optionsRow
             actionRow
             logPanel
         }
@@ -100,6 +101,20 @@ struct ContentView: View {
 
             Spacer()
         }
+    }
+
+    private var optionsRow: some View {
+        HStack(spacing: 18) {
+            Toggle("MP3도 함께 저장", isOn: $store.extractMP3)
+                .disabled(store.isDownloading)
+            Toggle("플레이리스트 전체", isOn: $store.includePlaylist)
+                .disabled(store.isDownloading)
+            Toggle("완료 후 Finder 표시", isOn: $store.revealWhenComplete)
+
+            Spacer()
+        }
+        .toggleStyle(.checkbox)
+        .font(.callout)
     }
 
     private var logPanel: some View {

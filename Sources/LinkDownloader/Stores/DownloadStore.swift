@@ -10,15 +10,29 @@ final class DownloadStore: ObservableObject {
     @Published var statusMessage = "대기 중"
     @Published var logText = ""
     @Published var lastDownloadedFile: URL?
+    @Published var extractMP3: Bool {
+        didSet { defaults.set(extractMP3, forKey: DefaultsKey.extractMP3) }
+    }
+    @Published var includePlaylist: Bool {
+        didSet { defaults.set(includePlaylist, forKey: DefaultsKey.includePlaylist) }
+    }
+    @Published var revealWhenComplete: Bool {
+        didSet { defaults.set(revealWhenComplete, forKey: DefaultsKey.revealWhenComplete) }
+    }
 
     private let service = DownloadService()
     private var activeSession: DownloadSession?
     private var downloadTask: Task<Void, Never>?
     private var activeDownloadID: UUID?
+    private let defaults = UserDefaults.standard
 
     init() {
         destinationURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Downloads")
+        extractMP3 = defaults.bool(forKey: DefaultsKey.extractMP3)
+        includePlaylist = defaults.bool(forKey: DefaultsKey.includePlaylist)
+        revealWhenComplete = defaults.object(forKey: DefaultsKey.revealWhenComplete) as? Bool ?? true
+        urlText = Self.clipboardURLString() ?? ""
     }
 
     var canStart: Bool {
@@ -67,6 +81,10 @@ final class DownloadStore: ObservableObject {
                 let result = try await service.download(
                     urlString: inputURL,
                     destination: targetDirectory,
+                    options: DownloadOptions(
+                        extractMP3: extractMP3,
+                        includePlaylist: includePlaylist
+                    ),
                     session: session,
                     onOutput: { output in
                         Task { @MainActor in
@@ -80,6 +98,9 @@ final class DownloadStore: ObservableObject {
                 guard activeDownloadID == downloadID else { return }
                 lastDownloadedFile = result.primaryFile
                 statusMessage = session.isCancelled ? "중지됨" : result.primaryFile.map { "완료: \($0.lastPathComponent)" } ?? "완료"
+                if !session.isCancelled, revealWhenComplete {
+                    revealDestination()
+                }
             } catch {
                 guard activeDownloadID == downloadID else { return }
                 statusMessage = session.isCancelled ? "중지됨" : error.localizedDescription
@@ -112,4 +133,22 @@ final class DownloadStore: ObservableObject {
             logText = String(logText.suffix(20_000))
         }
     }
+
+    private static func clipboardURLString() -> String? {
+        guard let pasted = NSPasteboard.general.string(forType: .string)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+            let url = URL(string: pasted),
+            let scheme = url.scheme?.lowercased(),
+            ["http", "https"].contains(scheme)
+        else {
+            return nil
+        }
+        return pasted
+    }
+}
+
+private enum DefaultsKey {
+    static let extractMP3 = "extractMP3"
+    static let includePlaylist = "includePlaylist"
+    static let revealWhenComplete = "revealWhenComplete"
 }
